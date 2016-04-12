@@ -21,6 +21,8 @@
 #include <curses.h>
 #include "spi.h"
 
+#define APA_TRACE(msg) printf("[APA]"); printf(msg);
+
 /*** defines ***/
 #define CONFIG_SPI_FLASH_NO_FAST_READ
 #define BOOTORDER_FILE     "bootorder"
@@ -127,8 +129,10 @@ int main(void) {
 				usb_toggle ^= 0x1;
 				break;
 			case 'E':
+			    APA_TRACE("E pressed\n");
 				update_tag_value(bootlist, max_lines, "scon", serial_toggle + '0');
 				update_tag_value(bootlist, max_lines, "pxen", ipxe_toggle + '0');
+				APA_TRACE("saving flash\n");
 				save_flash( bootlist, max_lines );
 				// fall through to exit ...
 			case 'X':
@@ -188,7 +192,10 @@ static void show_boot_device_list( char buffer[MAX_DEVICES][MAX_LENGTH], u8 line
 	printf("==============================================\n");
 	printf("Type lower case letter to move device to top\n");
 	printf("==============================================\n");
-	printf("boot devices\n\n");
+	printf("boot devices \n");
+
+	printf("apa test\n");
+
 	for (i = 0; i < line_cnt; i++ ) {
 		for (y = 0; y < lineDef_cnt; y++) {
 			if (strcmp_printable_char(&(buffer[i][0]), &(bootlist_def[y][0])) == 0)
@@ -296,6 +303,7 @@ static void save_flash(char buffer[MAX_DEVICES][MAX_LENGTH], u8 max_lines) {
 	struct spi_flash *flash;
 	u32 nvram_pos;
 
+	APA_TRACE("save_flash\n");
 	// compact the table into the expected packed list
 	for (j = 0; j < max_lines; j++) {
 		k = 0;
@@ -307,8 +315,11 @@ static void save_flash(char buffer[MAX_DEVICES][MAX_LENGTH], u8 max_lines) {
 		}
 	}
 
+	APA_TRACE("save_flash 2\n");
 	cbfs_formatted_list[i++] = NUL;
 	spi_init();
+
+	APA_TRACE("save_flash 2\n");
 	flash = spi_flash_probe(0, 0, 0, 0);
 
 	if (!flash)
@@ -329,6 +340,8 @@ static void save_flash(char buffer[MAX_DEVICES][MAX_LENGTH], u8 max_lines) {
 static void update_tag_value(char buffer[MAX_DEVICES][MAX_LENGTH], u8 max_lines, const char * tag, char value)
 {
 	int i;
+
+	APA_TRACE("update_tag_value\n")
 
 	for (i = 0; i < max_lines; i++) {
 		if (!strncmp(tag, &buffer[i][0], strlen(tag))) {

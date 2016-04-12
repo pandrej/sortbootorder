@@ -8,7 +8,7 @@
  * Licensed under the GPL-2 or later.
  */
 
-//#define SPI_DEBUG
+#define SPI_DEBUG
 
 #include <libpayload-config.h>
 #include <stdlib.h>
@@ -27,6 +27,7 @@ static void spi_flash_addr(u32 addr, u8 *cmd)
 
 int spi_flash_cmd(struct spi_slave *spi, u8 cmd, void *response, size_t len)
 {
+    spi_debug("APA : spi_flash_cmd 0x%02x: %d\n", cmd, len);
 	int ret = spi_xfer(spi, &cmd, 8, response, len * 8);
 	if (ret)
 		spi_debug("SF: Failed to send command %02x: %d\n", cmd, ret);
@@ -237,6 +238,8 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs,
 	int ret, i, shift;
 	u8 idcode[IDCODE_LEN], *idp;
 
+	printf("APA spi_flash_probe\n");
+
 	spi = spi_setup_slave(bus, cs, max_hz, spi_mode);
 	if (!spi) {
 		spi_debug("SF: Failed to set up slave\n");
@@ -250,12 +253,22 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs,
 		goto err_claim_bus;
 	}
 
+	printf("APA spi_flash_probe: read ID codes\n");
+
 	/* Read the ID codes */
 	ret = spi_flash_cmd(spi, CMD_READ_ID, idcode, sizeof(idcode));
 	if (ret)
 		goto err_read_id;
 
-	spi_debug("SF: Got idcodes\n");
+	spi_debug("SF: Got idcodes, bytes cnt: %d\n", sizeof(idcode));
+
+    /* count the number of continuation bytes */
+	printf("idcodes:");
+    for (i = 0 ; i < sizeof(idcode); i++)
+    {
+        printf("0x%02x ", idcode[i]);
+    }
+    printf("\n");
 
 	/* count the number of continuation bytes */
 	for (shift = 0, idp = idcode;
@@ -266,7 +279,7 @@ struct spi_flash *spi_flash_probe(unsigned int bus, unsigned int cs,
 	/* search the table for matches in shift and id */
 	for (i = 0; i < ARRAY_SIZE(flashes); ++i)
 		if (flashes[i].shift == shift && flashes[i].idcode == *idp) {
-
+		    spi_debug("SF: Manufacturer id %02x\n , continuation bytes : %d", flashes[i].idcode, flashes[i].shift);
 			/* we have a match, call probe */
 			flash = flashes[i].probe(spi, idp);
 			if (flash)
